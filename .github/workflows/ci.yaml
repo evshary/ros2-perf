@@ -1,5 +1,8 @@
 name: CI
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   push:
     branches:
@@ -22,7 +25,7 @@ jobs:
   markdown_lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: DavidAnson/markdownlint-cli2-action@v18
         with:
           config: '.markdownlint.yaml'
@@ -34,14 +37,15 @@ jobs:
       image: rostooling/setup-ros-docker:ubuntu-noble-ros-jazzy-ros-base-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - uses: ros-tooling/setup-ros@v0.7
         with:
           required-ros-distributions: jazzy
-      - uses: ros-tooling/action-ros-ci@v0.3
+      - uses: ros-tooling/action-ros-ci@v0.4
         with:
           package-name: perf
           target-ros2-distro: jazzy
+          coverage-result: false
           colcon-defaults: |
             {
               "build": {
