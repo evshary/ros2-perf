@@ -1,0 +1,7 @@
+# ROS related
+build
+install
+log
+
+# AI related
+.codex
