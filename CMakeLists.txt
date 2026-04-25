@@ -33,10 +33,22 @@ rosidl_get_typesupport_target(cpp_typesupport_target
     ${PROJECT_NAME} rosidl_typesupport_cpp)
 target_link_libraries(pong "${cpp_typesupport_target}")
 ament_target_dependencies(pong rclcpp)
+add_executable(throughput_send src/throughput_send.cpp)
+rosidl_get_typesupport_target(cpp_typesupport_target
+    ${PROJECT_NAME} rosidl_typesupport_cpp)
+target_link_libraries(throughput_send "${cpp_typesupport_target}")
+ament_target_dependencies(throughput_send rclcpp)
+add_executable(throughput_recv src/throughput_recv.cpp)
+rosidl_get_typesupport_target(cpp_typesupport_target
+    ${PROJECT_NAME} rosidl_typesupport_cpp)
+target_link_libraries(throughput_recv "${cpp_typesupport_target}")
+ament_target_dependencies(throughput_recv rclcpp)
 
 install(TARGETS
   ping
   pong
+  throughput_send
+  throughput_recv
   DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)

@@ -11,7 +11,7 @@ cd ..
 colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 ```
 
-## Run
+## Latency
 
 * Terminal 1: Run pong
 
@@ -34,3 +34,32 @@ ros2 run perf ping --ros-args -p reliability:=BEST_EFFORT -p durability:=TRANSIE
 # Other configuration
 ros2 run perf ping --ros-args -p warmup:=5.0 -p size:=32 -p samples:=100 -p rate:=10
 ```
+
+## Throughput
+
+* Terminal 1: Run throughput sender
+
+```shell
+ros2 run perf throughput_send
+# Run without progress logs from ROS
+ros2 run perf throughput_send --ros-args --log-level warn
+# Sender payload configuration
+ros2 run perf throughput_send --ros-args -p size:=1048576
+# Run with QoS
+ros2 run perf throughput_send --ros-args -p reliability:=BEST_EFFORT -p durability:=TRANSIENT_LOCAL -p history:=KEEP_ALL
+```
+
+* Terminal 2: Run throughput receiver
+
+```shell
+ros2 run perf throughput_recv
+# Run without progress logs from ROS
+ros2 run perf throughput_recv --ros-args --log-level warn
+# Receiver timing configuration
+ros2 run perf throughput_recv --ros-args -p warmup:=5.0 -p running_time:=10.0
+# Run with QoS
+ros2 run perf throughput_recv --ros-args -p reliability:=BEST_EFFORT -p durability:=TRANSIENT_LOCAL -p history:=KEEP_ALL
+```
+
+`running_time` is the measured throughput window after warmup.
+The receiver exits after `warmup + running_time` seconds in total.
