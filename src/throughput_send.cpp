@@ -32,7 +32,8 @@ public:
     std::cout << "Payload size (bytes): " << payload_size_ << std::endl;
     qos_config_.print();
 
-    publisher_ = create_publisher<perf::msg::U8Array>(kThroughputTopic, qos_config_.to_rclcpp_qos());
+    publisher_ = create_publisher<perf::msg::U8Array>(
+      kThroughputTopic, qos_config_.to_rclcpp_qos());
   }
 
   void run()

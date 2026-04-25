@@ -148,7 +148,8 @@ private:
       return 0.0;
     }
 
-    const auto measured = std::chrono::duration_cast<Seconds>(now - measurement_start_time_).count();
+    const auto measured = std::chrono::duration_cast<Seconds>(
+      now - measurement_start_time_).count();
     return std::min(measured, runtime_seconds_);
   }
 
@@ -158,8 +159,9 @@ private:
     const auto mib = static_cast<double>(measured_bytes_) / (1024.0 * 1024.0);
     const auto mib_rate = mib / elapsed;
     const auto expected_messages = measured_messages_ + dropped_messages_;
-    const auto drop_percent =
-      expected_messages == 0U ? 0.0 : (static_cast<double>(dropped_messages_) * 100.0) / expected_messages;
+    const auto drop_percent = expected_messages == 0U ?
+      0.0 :
+      (static_cast<double>(dropped_messages_) * 100.0) / expected_messages;
 
     std::cout << std::fixed << std::setprecision(2)
               << prefix
