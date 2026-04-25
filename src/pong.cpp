@@ -1,7 +1,7 @@
 #include <functional>
 #include <memory>
 
-#include "perf/msg/ping_pong.hpp"
+#include "perf/msg/u8_array.hpp"
 #include "qos.hpp"
 #include "rclcpp/rclcpp.hpp"
 
@@ -19,21 +19,21 @@ public:
     qos_config_.print();
 
     const auto qos = qos_config_.to_rclcpp_qos();
-    ping_subscriber_ = create_subscription<perf::msg::PingPong>(
+    ping_subscriber_ = create_subscription<perf::msg::U8Array>(
       "ping", qos, std::bind(&PongNode::handle_ping, this, std::placeholders::_1));
-    pong_publisher_ = create_publisher<perf::msg::PingPong>("pong", qos);
+    pong_publisher_ = create_publisher<perf::msg::U8Array>("pong", qos);
   }
 
 private:
-  void handle_ping(const perf::msg::PingPong::SharedPtr msg) const
+  void handle_ping(const perf::msg::U8Array::SharedPtr msg) const
   {
     pong_publisher_->publish(*msg);
     RCLCPP_INFO(get_logger(), "Receiving data size: %zu", msg->data.size());
   }
 
   QoSConfig qos_config_;
-  rclcpp::Subscription<perf::msg::PingPong>::SharedPtr ping_subscriber_;
-  rclcpp::Publisher<perf::msg::PingPong>::SharedPtr pong_publisher_;
+  rclcpp::Subscription<perf::msg::U8Array>::SharedPtr ping_subscriber_;
+  rclcpp::Publisher<perf::msg::U8Array>::SharedPtr pong_publisher_;
 };
 
 }  // namespace

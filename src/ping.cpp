@@ -9,7 +9,7 @@
 #include <stdexcept>
 #include <vector>
 
-#include "perf/msg/ping_pong.hpp"
+#include "perf/msg/u8_array.hpp"
 #include "qos.hpp"
 #include "rclcpp/rclcpp.hpp"
 
@@ -36,8 +36,8 @@ public:
 
     qos_config_.print();
     const auto qos = qos_config_.to_rclcpp_qos();
-    ping_publisher_ = create_publisher<perf::msg::PingPong>("ping", qos);
-    pong_subscriber_ = create_subscription<perf::msg::PingPong>(
+    ping_publisher_ = create_publisher<perf::msg::U8Array>("ping", qos);
+    pong_subscriber_ = create_subscription<perf::msg::U8Array>(
       "pong", qos, std::bind(&PingNode::handle_pong, this, std::placeholders::_1));
     timer_ = create_wall_timer(compute_publish_period(), std::bind(&PingNode::publish_ping, this));
   }
@@ -104,7 +104,7 @@ private:
 
   void initialize_message()
   {
-    message_ = std::make_shared<perf::msg::PingPong>();
+    message_ = std::make_shared<perf::msg::U8Array>();
     message_->data.assign(payload_size_, 0);
   }
 
@@ -153,7 +153,7 @@ private:
     }
   }
 
-  void handle_pong(const perf::msg::PingPong::SharedPtr msg)
+  void handle_pong(const perf::msg::U8Array::SharedPtr msg)
   {
     std::uint64_t sent_timestamp_us = 0;
     std::memmove(&sent_timestamp_us, msg->data.data(), sizeof(sent_timestamp_us));
@@ -178,8 +178,8 @@ private:
   }
 
   rclcpp::TimerBase::SharedPtr timer_;
-  rclcpp::Publisher<perf::msg::PingPong>::SharedPtr ping_publisher_;
-  rclcpp::Subscription<perf::msg::PingPong>::SharedPtr pong_subscriber_;
+  rclcpp::Publisher<perf::msg::U8Array>::SharedPtr ping_publisher_;
+  rclcpp::Subscription<perf::msg::U8Array>::SharedPtr pong_subscriber_;
 
   QoSConfig qos_config_;
   std::size_t samples_ = 0;
@@ -190,7 +190,7 @@ private:
 
   double total_expected_runtime_ = 0.0;
   std::atomic<std::size_t> samples_sent_{0};
-  perf::msg::PingPong::SharedPtr message_;
+  perf::msg::U8Array::SharedPtr message_;
   std::vector<double> round_trip_times_us_;
   Clock::time_point start_time_;
 };

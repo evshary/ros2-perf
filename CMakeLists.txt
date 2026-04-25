@@ -15,7 +15,7 @@ find_package(rclcpp REQUIRED)
 # Create msgs
 find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/PingPong.msg"
+  "msg/U8Array.msg"
 )
 ament_export_dependencies(rosidl_default_runtime)
 
