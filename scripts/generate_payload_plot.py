@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# flake8: noqa: D100,D103,Q000
+# This executable plotting utility prioritizes compact CLI code and readable
+# embedded HTML/JS strings, so we scope the ignore to this file only.
 
 import argparse
 import json
