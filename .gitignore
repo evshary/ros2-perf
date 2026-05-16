@@ -5,3 +5,9 @@ log
 
 # AI related
 .codex
+
+# Python related
+__pycache__
+
+# Result
+benchmark_results/*

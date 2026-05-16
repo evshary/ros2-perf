@@ -1,15 +1,21 @@
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <functional>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <string>
 #include <stdexcept>
+#include <vector>
 
 #include "perf/msg/u8_array.hpp"
 #include "qos.hpp"
+#include "result_utils.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 using namespace std::chrono_literals;
@@ -22,18 +28,32 @@ using Seconds = std::chrono::duration<double>;
 
 constexpr char kThroughputTopic[] = "throughput";
 
+struct ThroughputSample
+{
+  double elapsed_seconds = 0.0;
+  std::uint64_t received_messages = 0U;
+  double received_mib = 0.0;
+  double message_rate = 0.0;
+  double mib_rate = 0.0;
+  std::uint64_t dropped_messages = 0U;
+  double drop_percent = 0.0;
+};
+
 class ThroughputRecvNode : public rclcpp::Node
 {
 public:
   ThroughputRecvNode()
   : rclcpp::Node("throughput_recv_node")
   {
+    run_started_at_ = std::chrono::system_clock::now();
     declare_parameter("warmup", 5.0);
     declare_parameter("running_time", 10.0);
+    declare_parameter("output_json", std::string{""});
     QoSConfig::declare_parameters(*this);
 
     warmup_seconds_ = get_parameter("warmup").as_double();
     runtime_seconds_ = get_parameter("running_time").as_double();
+    output_json_path_ = get_parameter("output_json").as_string();
     qos_config_ = QoSConfig::from_node(*this);
     validate_parameters();
 
@@ -56,14 +76,18 @@ public:
     return elapsed_seconds() < warmup_seconds_ + runtime_seconds_;
   }
 
-  void show_final_summary() const
+  void show_final_summary()
   {
     if (measured_messages_ == 0U) {
       std::cout << "[ERROR] No throughput samples were collected." << std::endl;
+      write_results_json(std::nullopt, "No throughput samples were collected.");
       return;
     }
 
-    print_summary("[Final]", measurement_elapsed_seconds());
+    const auto final_sample = build_sample(measurement_elapsed_seconds());
+    print_summary("[Final]", final_sample);
+    progress_samples_.push_back(final_sample);
+    write_results_json(final_sample, "");
   }
 
 private:
@@ -82,6 +106,7 @@ private:
   {
     const auto sequence = decode_sequence(*msg);
     const auto now = Clock::now();
+    payload_size_bytes_ = msg->data.size();
 
     if (!measurement_started_ && elapsed_seconds(now) >= warmup_seconds_) {
       measurement_started_ = true;
@@ -117,7 +142,9 @@ private:
     }
 
     last_report_time_ = now;
-    print_summary("[Progress]", measurement_elapsed_seconds(now));
+    const auto progress_sample = build_sample(measurement_elapsed_seconds(now));
+    print_summary("[Progress]", progress_sample);
+    progress_samples_.push_back(progress_sample);
   }
 
   std::uint64_t decode_sequence(const perf::msg::U8Array & msg) const
@@ -153,39 +180,152 @@ private:
     return std::min(measured, runtime_seconds_);
   }
 
-  void print_summary(const char * prefix, double elapsed) const
+  ThroughputSample build_sample(double elapsed) const
   {
-    const auto message_rate = measured_messages_ / elapsed;
-    const auto mib = static_cast<double>(measured_bytes_) / (1024.0 * 1024.0);
-    const auto mib_rate = mib / elapsed;
+    ThroughputSample sample;
+    const auto safe_elapsed = std::max(elapsed, 1e-9);
+    sample.elapsed_seconds = elapsed;
+    sample.received_messages = measured_messages_;
+    sample.received_mib = static_cast<double>(measured_bytes_) / (1024.0 * 1024.0);
+    sample.message_rate = measured_messages_ / safe_elapsed;
+    sample.mib_rate = sample.received_mib / safe_elapsed;
     const auto expected_messages = measured_messages_ + dropped_messages_;
-    const auto drop_percent = expected_messages == 0U ?
+    sample.dropped_messages = dropped_messages_;
+    sample.drop_percent = expected_messages == 0U ?
       0.0 :
       (static_cast<double>(dropped_messages_) * 100.0) / expected_messages;
+    return sample;
+  }
 
+  void print_summary(const char * prefix, const ThroughputSample & sample) const
+  {
     std::cout << std::fixed << std::setprecision(2)
               << prefix
-              << " elapsed(s): " << elapsed
-              << ", recv(msg): " << measured_messages_
-              << ", recv(MiB): " << mib
-              << ", rate(msg/s): " << message_rate
-              << ", rate(MiB/s): " << mib_rate
-              << ", dropped: " << dropped_messages_
-              << ", drop(%): " << drop_percent
+              << " elapsed(s): " << sample.elapsed_seconds
+              << ", recv(msg): " << sample.received_messages
+              << ", recv(MiB): " << sample.received_mib
+              << ", rate(msg/s): " << sample.message_rate
+              << ", rate(MiB/s): " << sample.mib_rate
+              << ", dropped: " << sample.dropped_messages
+              << ", drop(%): " << sample.drop_percent
               << std::endl;
+  }
+
+  void write_results_json(
+    const std::optional<ThroughputSample> & final_sample,
+    const std::string & error_message) const
+  {
+    if (output_json_path_.empty()) {
+      return;
+    }
+
+    auto output = create_output_file(output_json_path_);
+    output << std::fixed << std::setprecision(2);
+    output << "{\n";
+    output << "  \"benchmark_type\": \"throughput\",\n";
+    output << "  \"timestamp\": ";
+    write_json_string(output, to_iso8601_utc(run_started_at_));
+    output << ",\n";
+    output << "  \"rmw_implementation\": ";
+    write_json_string(
+      output, std::getenv("RMW_IMPLEMENTATION") == nullptr ?
+      "UNSET" :
+      std::getenv("RMW_IMPLEMENTATION"));
+    output << ",\n";
+    output << "  \"ros_distro\": ";
+    write_json_string(
+      output, std::getenv("ROS_DISTRO") == nullptr ?
+      "UNSET" :
+      std::getenv("ROS_DISTRO"));
+    output << ",\n";
+    output << "  \"status\": ";
+    write_json_string(output, final_sample.has_value() ? "ok" : "error");
+    output << ",\n";
+    output << "  \"parameters\": {\n";
+    output << "    \"warmup_seconds\": " << warmup_seconds_ << ",\n";
+    output << "    \"running_time_seconds\": " << runtime_seconds_ << ",\n";
+    output << "    \"payload_size_bytes\": " << payload_size_bytes_ << "\n";
+    output << "  },\n";
+    output << "  \"qos\": {\n";
+    output << "    \"reliability\": ";
+    write_json_string(output, qos_config_.reliability);
+    output << ",\n";
+    output << "    \"durability\": ";
+    write_json_string(output, qos_config_.durability);
+    output << ",\n";
+    output << "    \"history\": ";
+    write_json_string(output, qos_config_.history);
+    output << ",\n";
+    output << "    \"history_depth\": " << qos_config_.history_depth << "\n";
+    output << "  },\n";
+
+    output << "  \"progress_samples\": [\n";
+    for (std::size_t index = 0; index < progress_samples_.size(); ++index) {
+      const auto & sample = progress_samples_[index];
+      output << "    {\n";
+      output << "      \"elapsed_seconds\": " << sample.elapsed_seconds << ",\n";
+      output << "      \"received_messages\": " << sample.received_messages << ",\n";
+      output << "      \"received_mib\": " << sample.received_mib << ",\n";
+      output << "      \"message_rate\": " << sample.message_rate << ",\n";
+      output << "      \"mib_rate\": " << sample.mib_rate << ",\n";
+      output << "      \"dropped_messages\": " << sample.dropped_messages << ",\n";
+      output << "      \"drop_percent\": " << sample.drop_percent << "\n";
+      output << "    }";
+      if (index + 1U != progress_samples_.size()) {
+        output << ",";
+      }
+      output << "\n";
+    }
+    output << "  ],\n";
+
+    output << "  \"summary\": ";
+    if (final_sample.has_value()) {
+      std::vector<double> mib_rates;
+      mib_rates.reserve(progress_samples_.size());
+      for (const auto & sample : progress_samples_) {
+        mib_rates.push_back(sample.mib_rate);
+      }
+      std::sort(mib_rates.begin(), mib_rates.end());
+      const auto median_index = (mib_rates.size() - 1U) / 2U;
+
+      output << "{\n";
+      output << "    \"received_messages\": " << final_sample->received_messages << ",\n";
+      output << "    \"received_mib\": " << final_sample->received_mib << ",\n";
+      output << "    \"message_rate\": " << final_sample->message_rate << ",\n";
+      output << "    \"mib_rate\": " << final_sample->mib_rate << ",\n";
+      output << "    \"dropped_messages\": " << final_sample->dropped_messages << ",\n";
+      output << "    \"drop_percent\": " << final_sample->drop_percent << ",\n";
+      output << "    \"min_mib_per_sec\": " << mib_rates.front() << ",\n";
+      output << "    \"median_mib_per_sec\": " << mib_rates[median_index] << ",\n";
+      output << "    \"max_mib_per_sec\": " << mib_rates.back() << "\n";
+      output << "  }";
+    } else {
+      output << "null";
+    }
+
+    if (!error_message.empty()) {
+      output << ",\n  \"error\": ";
+      write_json_string(output, error_message);
+    }
+
+    output << "\n}\n";
   }
 
   QoSConfig qos_config_;
   double warmup_seconds_ = 0.0;
   double runtime_seconds_ = 0.0;
+  std::string output_json_path_;
   bool measurement_started_ = false;
   Clock::time_point start_time_;
   Clock::time_point measurement_start_time_;
   Clock::time_point last_report_time_;
+  std::chrono::system_clock::time_point run_started_at_;
   std::optional<std::uint64_t> previous_sequence_;
+  std::size_t payload_size_bytes_ = 0U;
   std::uint64_t measured_messages_ = 0;
   std::uint64_t measured_bytes_ = 0;
   std::uint64_t dropped_messages_ = 0;
+  std::vector<ThroughputSample> progress_samples_;
   rclcpp::Subscription<perf::msg::U8Array>::SharedPtr subscriber_;
   rclcpp::TimerBase::SharedPtr report_timer_;
 };
