@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# flake8: noqa: D100,D103,Q000
+# This small CLI runner is an executable utility script; we keep its ROS-focused
+# command strings readable and avoid adding low-value docstrings everywhere.
 
 import json
 import os
@@ -13,6 +16,19 @@ from pathlib import Path
 
 PAYLOAD_SIZES = [32, 128, 512, 1024, 4096, 16384, 65536, 262144, 1048576]
 PID_FILE = Path("/tmp/ros2-perf-throughput-pids.json")
+
+
+def read_env_float(name: str, default: float) -> float:
+    return float(os.environ.get(name, default))
+
+
+def read_payload_sizes() -> list[int]:
+    payloads = os.environ.get('ROS2_PERF_PAYLOAD_SIZES')
+    if not payloads:
+        return PAYLOAD_SIZES
+    return [
+        int(value.strip()) for value in payloads.split(',') if value.strip()
+    ]
 
 
 def create_output_dir() -> Path:
@@ -54,21 +70,27 @@ def terminate_pid(pid: int, name: str) -> None:
 def load_registered_pids() -> list[dict[str, int | str]]:
     if not PID_FILE.exists():
         return []
-    return json.loads(PID_FILE.read_text(encoding="utf-8"))
+    return json.loads(PID_FILE.read_text(encoding='utf-8'))
 
 
 def save_registered_pids(entries: list[dict[str, int | str]]) -> None:
-    PID_FILE.write_text(json.dumps(entries), encoding="utf-8")
+    PID_FILE.write_text(json.dumps(entries), encoding='utf-8')
 
 
 def register_process(process: subprocess.Popen, name: str) -> None:
-    entries = [entry for entry in load_registered_pids() if entry["pid"] != process.pid]
-    entries.append({"pid": process.pid, "name": name})
+    entries = [
+        entry for entry in load_registered_pids()
+        if entry['pid'] != process.pid
+    ]
+    entries.append({'pid': process.pid, 'name': name})
     save_registered_pids(entries)
 
 
 def unregister_process(process: subprocess.Popen) -> None:
-    entries = [entry for entry in load_registered_pids() if entry["pid"] != process.pid]
+    entries = [
+        entry for entry in load_registered_pids()
+        if entry['pid'] != process.pid
+    ]
     if entries:
         save_registered_pids(entries)
     else:
@@ -77,12 +99,16 @@ def unregister_process(process: subprocess.Popen) -> None:
 
 def cleanup_registered_processes() -> None:
     for entry in load_registered_pids():
-        terminate_pid(int(entry["pid"]), str(entry["name"]))
+        terminate_pid(int(entry['pid']), str(entry['name']))
     PID_FILE.unlink(missing_ok=True)
 
 
 def run_payload(payload_size: int, output_dir: Path) -> None:
     output_json = output_dir / f"throughput-{payload_size}.json"
+    warmup = read_env_float('ROS2_PERF_THROUGHPUT_WARMUP', 5.0)
+    running_time = read_env_float(
+        'ROS2_PERF_THROUGHPUT_RUNNING_TIME', 10.0,
+    )
     recv_command = [
         "ros2",
         "run",
@@ -91,6 +117,10 @@ def run_payload(payload_size: int, output_dir: Path) -> None:
         "--ros-args",
         "--log-level",
         "warn",
+        "-p",
+        f"warmup:={warmup}",
+        "-p",
+        f"running_time:={running_time}",
         "-p",
         f"output_json:={output_json}",
     ]
@@ -144,7 +174,7 @@ def main() -> None:
     print(f"Throughput results will be written to {output_dir}")
     cleanup_registered_processes()
 
-    for payload_size in PAYLOAD_SIZES:
+    for payload_size in read_payload_sizes():
         run_payload(payload_size, output_dir)
 
     generate_plot(output_dir)

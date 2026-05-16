@@ -39,10 +39,13 @@ jobs:
         include:
           - ros_distro: humble
             container_image: rostooling/setup-ros-docker:ubuntu-jammy-ros-humble-ros-base-latest
+            run_launch_smoke_test: false
           - ros_distro: jazzy
             container_image: rostooling/setup-ros-docker:ubuntu-noble-ros-jazzy-ros-base-latest
+            run_launch_smoke_test: true
           - ros_distro: kilted
             container_image: rostooling/setup-ros-docker:ubuntu-noble-ros-kilted-ros-base-latest
+            run_launch_smoke_test: false
     container:
       image: ${{ matrix.container_image }}
     steps:
@@ -68,3 +71,20 @@ jobs:
         with:
           name: colcon-logs-${{ matrix.ros_distro }}
           path: ros_ws/log
+      - name: Launch Smoke Test
+        if: ${{ matrix.run_launch_smoke_test }}
+        shell: bash
+        env:
+          ROS2_PERF_PAYLOAD_SIZES: 32
+          ROS2_PERF_LATENCY_WARMUP: 0.1
+          ROS2_PERF_LATENCY_SAMPLES: 3
+          ROS2_PERF_LATENCY_RATE: 10
+          ROS2_PERF_THROUGHPUT_WARMUP: 0.1
+          ROS2_PERF_THROUGHPUT_RUNNING_TIME: 3.0
+        run: |
+          source /opt/ros/${{ matrix.ros_distro }}/setup.bash
+          source ros_ws/install/setup.bash
+          ros2 launch perf latency.launch.py
+          ros2 launch perf throughput.launch.py
+          test -f benchmark_results/*/latency.html
+          test -f benchmark_results/*/throughput.html
