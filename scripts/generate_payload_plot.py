@@ -31,9 +31,11 @@ TITLES = {
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--benchmark", choices=sorted(SERIES.keys()), required=True)
-    parser.add_argument("--input-dir", required=True)
-    parser.add_argument("--output", required=True)
+    parser.add_argument(
+        '--benchmark', choices=sorted(SERIES.keys()), required=True,
+    )
+    parser.add_argument('--input-dir', required=True)
+    parser.add_argument('--output', required=True)
     return parser.parse_args()
 
 
@@ -41,26 +43,34 @@ def load_runs(benchmark: str, input_dir: Path):
     runs_by_payload = {}
     for path in sorted(input_dir.glob("*.json")):
         data = json.loads(path.read_text(encoding="utf-8"))
-        if data.get("benchmark_type") != benchmark or data.get("status") != "ok":
+        if (
+            data.get('benchmark_type') != benchmark or
+            data.get('status') != 'ok'
+        ):
             continue
-        payload_size = data["parameters"]["payload_size_bytes"]
+        payload_size = data['parameters']['payload_size_bytes']
         previous = runs_by_payload.get(payload_size)
-        if previous is None or data.get("timestamp", "") >= previous.get("timestamp", ""):
+        if (
+            previous is None or
+            data.get('timestamp', '') >= previous.get('timestamp', '')
+        ):
             runs_by_payload[payload_size] = data
 
     runs = list(runs_by_payload.values())
-    runs.sort(key=lambda item: item["parameters"]["payload_size_bytes"])
+    runs.sort(key=lambda item: item['parameters']['payload_size_bytes'])
     if not runs:
-        raise RuntimeError(f"no successful {benchmark} result files found in {input_dir}")
+        raise RuntimeError(
+            f'no successful {benchmark} result files found in {input_dir}',
+        )
     return runs
 
 
 def build_chart_rows(benchmark: str, runs):
     rows = []
     for run in runs:
-        payload = run["parameters"]["payload_size_bytes"]
-        summary = run["summary"]
-        row = {"payload_size_bytes": payload}
+        payload = run['parameters']['payload_size_bytes']
+        summary = run['summary']
+        row = {'payload_size_bytes': payload}
         for entry in SERIES[benchmark]:
             row[entry["label"]] = summary[entry["key"]]
         rows.append(row)
@@ -69,16 +79,16 @@ def build_chart_rows(benchmark: str, runs):
 
 def build_metadata(runs):
     first = runs[0]
-    qos = first["qos"]
+    qos = first['qos']
     qos_text = f'{qos["reliability"]} / {qos["durability"]} / {qos["history"]}'
     if qos["history"] == "KEEP_LAST":
         qos_text += f'({qos["history_depth"]})'
 
     return {
-        "rmw_implementation": first.get("rmw_implementation", "UNSET"),
-        "ros_distro": first.get("ros_distro", "UNSET"),
-        "qos_text": qos_text,
-        "timestamp": first["timestamp"],
+        'rmw_implementation': first.get('rmw_implementation', 'UNSET'),
+        'ros_distro': first.get('ros_distro', 'UNSET'),
+        'qos_text': qos_text,
+        'timestamp': first['timestamp'],
     }
 
 
@@ -110,9 +120,14 @@ def render_html(benchmark: str, rows, metadata):
     }}
     body {{
       margin: 0;
-      font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+      font-family:
+        "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
       background:
-        radial-gradient(circle at top left, rgba(180, 83, 9, 0.12), transparent 30%),
+        radial-gradient(
+          circle at top left,
+          rgba(180, 83, 9, 0.12),
+          transparent 30%
+        ),
         linear-gradient(180deg, #f8f5ef 0%, var(--bg) 100%);
       color: var(--text);
     }}
@@ -174,7 +189,10 @@ def render_html(benchmark: str, rows, metadata):
       color: var(--muted);
       cursor: pointer;
       user-select: none;
-      transition: background 120ms ease, border-color 120ms ease, opacity 120ms ease;
+      transition:
+        background 120ms ease,
+        border-color 120ms ease,
+        opacity 120ms ease;
     }}
     .toggle.active {{
       background: var(--active);
@@ -262,15 +280,24 @@ def render_html(benchmark: str, rows, metadata):
     <section class="grid">
       <article class="card chart-wrap">
         <div class="controls" id="controls"></div>
-        <svg id="chart" viewBox="0 0 920 540" role="img" aria-label="{title} chart"></svg>
+        <svg
+          id="chart"
+          viewBox="0 0 920 540"
+          role="img"
+          aria-label="{title} chart"
+        ></svg>
         <div class="tooltip" id="tooltip"></div>
       </article>
 
       <article class="card">
         <ul class="meta-list">
           <li><strong>Runs</strong>{len(rows)} payload sizes</li>
-          <li><strong>ROS Distro</strong><span id="ros-distro-value"></span></li>
-          <li><strong>RMW Implementation</strong><span id="rmw-value"></span></li>
+          <li>
+            <strong>ROS Distro</strong><span id="ros-distro-value"></span>
+          </li>
+          <li>
+            <strong>RMW Implementation</strong><span id="rmw-value"></span>
+          </li>
           <li><strong>QoS</strong><span id="qos-value"></span></li>
           <li><strong>Timestamp</strong><span id="timestamp-value"></span></li>
           <li><strong>Y axis</strong>{y_axis}</li>
@@ -309,14 +336,22 @@ def render_html(benchmark: str, rows, metadata):
     const innerHeight = height - margin.top - margin.bottom;
     const visible = new Set(series.map((entry) => entry.label));
 
-    document.getElementById("ros-distro-value").textContent = metadata.ros_distro;
-    document.getElementById("rmw-value").textContent = metadata.rmw_implementation;
+    document.getElementById("ros-distro-value").textContent =
+      metadata.ros_distro;
+    document.getElementById("rmw-value").textContent =
+      metadata.rmw_implementation;
     document.getElementById("qos-value").textContent = metadata.qos_text;
-    document.getElementById("timestamp-value").textContent = metadata.timestamp;
+    document.getElementById("timestamp-value").textContent =
+      metadata.timestamp;
 
     function addSvg(tag, attrs, parent = svg) {{
-      const element = document.createElementNS("http://www.w3.org/2000/svg", tag);
-      Object.entries(attrs).forEach(([key, value]) => element.setAttribute(key, String(value)));
+      const element = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        tag,
+      );
+      Object.entries(attrs).forEach(
+        ([key, value]) => element.setAttribute(key, String(value)),
+      );
       parent.appendChild(element);
       return element;
     }}
@@ -330,8 +365,11 @@ def render_html(benchmark: str, rows, metadata):
 
     function computeYRange() {{
       const activeSeries = series.filter((entry) => visible.has(entry.label));
-      const sourceSeries = activeSeries.length === 0 ? [series[1]] : activeSeries;
-      const values = rows.flatMap((row) => sourceSeries.map((entry) => row[entry.label]));
+      const sourceSeries =
+        activeSeries.length === 0 ? [series[1]] : activeSeries;
+      const values = rows.flatMap(
+        (row) => sourceSeries.map((entry) => row[entry.label]),
+      );
       const minY = Math.min(...values);
       const maxY = Math.max(...values);
       const padding = (maxY - minY || 1) * 0.12;
@@ -437,7 +475,9 @@ def render_html(benchmark: str, rows, metadata):
         const points = rows
           .map(
             (row) =>
-              `${{xScale(row.payload_size_bytes, xBounds.minX, xBounds.maxX)}},` +
+              `${{
+                xScale(row.payload_size_bytes, xBounds.minX, xBounds.maxX)
+              }},` +
               `${{yScale(row[entry.label], range)}}`,
           )
           .join(" ");
@@ -452,8 +492,15 @@ def render_html(benchmark: str, rows, metadata):
 
         rows.forEach((row) => {{
           const circle = addSvg("circle", {{
-            cx: xScale(row.payload_size_bytes, xBounds.minX, xBounds.maxX),
-            cy: yScale(row[entry.label], range),
+            cx: xScale(
+              row.payload_size_bytes,
+              xBounds.minX,
+              xBounds.maxX,
+            ),
+            cy: yScale(
+              row[entry.label],
+              range,
+            ),
             r: 5,
             fill: entry.color,
             stroke: "#fffdfa",
@@ -537,7 +584,10 @@ def main():
     rows = build_chart_rows(args.benchmark, runs)
     metadata = build_metadata(runs)
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(render_html(args.benchmark, rows, metadata), encoding="utf-8")
+    output.write_text(
+        render_html(args.benchmark, rows, metadata),
+        encoding='utf-8',
+    )
     print(f"Generated plot: {output}")
 
 
