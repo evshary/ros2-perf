@@ -33,18 +33,28 @@ jobs:
 
   build_test_ros2:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - ros_distro: humble
+            container_image: rostooling/setup-ros-docker:ubuntu-jammy-ros-humble-ros-base-latest
+          - ros_distro: jazzy
+            container_image: rostooling/setup-ros-docker:ubuntu-noble-ros-jazzy-ros-base-latest
+          - ros_distro: kilted
+            container_image: rostooling/setup-ros-docker:ubuntu-noble-ros-kilted-ros-base-latest
     container:
-      image: rostooling/setup-ros-docker:ubuntu-noble-ros-jazzy-ros-base-latest
+      image: ${{ matrix.container_image }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
       - uses: ros-tooling/setup-ros@v0.7
         with:
-          required-ros-distributions: jazzy
+          required-ros-distributions: ${{ matrix.ros_distro }}
       - uses: ros-tooling/action-ros-ci@v0.4
         with:
           package-name: perf
-          target-ros2-distro: jazzy
+          target-ros2-distro: ${{ matrix.ros_distro }}
           coverage-result: false
           colcon-defaults: |
             {
@@ -56,5 +66,5 @@ jobs:
             }
       - uses: actions/upload-artifact@v4
         with:
-          name: colcon-logs
+          name: colcon-logs-${{ matrix.ros_distro }}
           path: ros_ws/log
