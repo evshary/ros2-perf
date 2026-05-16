@@ -80,7 +80,7 @@ jobs:
           ROS2_PERF_LATENCY_SAMPLES: 3
           ROS2_PERF_LATENCY_RATE: 10
           ROS2_PERF_THROUGHPUT_WARMUP: 0.1
-          ROS2_PERF_THROUGHPUT_RUNNING_TIME: 1.0
+          ROS2_PERF_THROUGHPUT_RUNNING_TIME: 3.0
         run: |
           source /opt/ros/${{ matrix.ros_distro }}/setup.bash
           source ros_ws/install/setup.bash
