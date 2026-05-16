@@ -15,6 +15,21 @@ PAYLOAD_SIZES = [32, 128, 512, 1024, 4096, 16384, 65536, 262144, 1048576]
 PID_FILE = Path("/tmp/ros2-perf-latency-pids.json")
 
 
+def read_env_float(name: str, default: float) -> float:
+    return float(os.environ.get(name, default))
+
+
+def read_env_int(name: str, default: int) -> int:
+    return int(os.environ.get(name, default))
+
+
+def read_payload_sizes() -> list[int]:
+    payloads = os.environ.get("ROS2_PERF_PAYLOAD_SIZES")
+    if not payloads:
+        return PAYLOAD_SIZES
+    return [int(value.strip()) for value in payloads.split(",") if value.strip()]
+
+
 def create_output_dir() -> Path:
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     output_dir = Path.cwd() / "benchmark_results" / f"latency-{timestamp}"
@@ -83,6 +98,9 @@ def cleanup_registered_processes() -> None:
 
 def run_payload(payload_size: int, output_dir: Path) -> None:
     output_json = output_dir / f"latency-{payload_size}.json"
+    warmup = read_env_float("ROS2_PERF_LATENCY_WARMUP", 5.0)
+    samples = read_env_int("ROS2_PERF_LATENCY_SAMPLES", 100)
+    rate = read_env_int("ROS2_PERF_LATENCY_RATE", 10)
     pong_command = [
         "ros2",
         "run",
@@ -100,6 +118,12 @@ def run_payload(payload_size: int, output_dir: Path) -> None:
         "--ros-args",
         "--log-level",
         "warn",
+        "-p",
+        f"warmup:={warmup}",
+        "-p",
+        f"samples:={samples}",
+        "-p",
+        f"rate:={rate}",
         "-p",
         f"size:={payload_size}",
         "-p",
@@ -138,7 +162,7 @@ def main() -> None:
     print(f"Latency results will be written to {output_dir}")
     cleanup_registered_processes()
 
-    for payload_size in PAYLOAD_SIZES:
+    for payload_size in read_payload_sizes():
         run_payload(payload_size, output_dir)
 
     generate_plot(output_dir)

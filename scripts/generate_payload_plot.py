@@ -253,7 +253,10 @@ def render_html(benchmark: str, rows, metadata):
   <div class="page">
     <section class="hero">
       <h1>{title}</h1>
-      <p class="subtitle">Payload sweep with interactive min, median, and max toggles. The y-axis auto-rescales to the visible series.</p>
+      <p class="subtitle">
+        Payload sweep with interactive min, median, and max toggles.
+        The y-axis auto-rescales to the visible series.
+      </p>
     </section>
 
     <section class="grid">
@@ -431,7 +434,13 @@ def render_html(benchmark: str, rows, metadata):
           return;
         }}
 
-        const points = rows.map((row) => `${{xScale(row.payload_size_bytes, xBounds.minX, xBounds.maxX)}},${{yScale(row[entry.label], range)}}`).join(" ");
+        const points = rows
+          .map(
+            (row) =>
+              `${{xScale(row.payload_size_bytes, xBounds.minX, xBounds.maxX)}},` +
+              `${{yScale(row[entry.label], range)}}`,
+          )
+          .join(" ");
         addSvg("polyline", {{
           points,
           fill: "none",
@@ -455,7 +464,9 @@ def render_html(benchmark: str, rows, metadata):
             tooltip.style.display = "block";
             tooltip.style.left = `${{event.offsetX}}px`;
             tooltip.style.top = `${{event.offsetY}}px`;
-            tooltip.textContent = `payload=${{row.payload_size_bytes}} bytes, ${{entry.label}}=${{row[entry.label].toFixed(2)}}`;
+            tooltip.textContent =
+              `payload=${{row.payload_size_bytes}} bytes, ` +
+              `${{entry.label}}=${{row[entry.label].toFixed(2)}}`;
           }});
           circle.addEventListener("mouseleave", () => {{
             tooltip.style.display = "none";
