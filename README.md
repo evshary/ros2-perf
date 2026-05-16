@@ -63,3 +63,35 @@ ros2 run perf throughput_recv --ros-args -p reliability:=BEST_EFFORT -p durabili
 
 `running_time` is the measured throughput window after warmup.
 The receiver exits after `warmup + running_time` seconds in total.
+
+## Payload Sweep Plots
+
+Run the built-in payload sweep for latency and generate `latency.html`:
+
+```shell
+ros2 launch perf latency.launch.py
+```
+
+Run the built-in payload sweep for throughput and generate `throughput.html`:
+
+```shell
+ros2 launch perf throughput.launch.py
+```
+
+Both launch files create a timestamped directory under `benchmark_results/` in the current
+working directory. Each run directory contains the raw JSON results for every payload size and
+the generated self-contained HTML plot.
+
+## Troubleshooting
+
+If a launch run is interrupted, old benchmark processes may still be running and can affect the
+next sweep. Clean them before retrying:
+
+```shell
+pkill -f 'install/perf/lib/perf/throughput_send'
+pkill -f 'install/perf/lib/perf/throughput_recv'
+pkill -f 'ros2 run perf throughput_send'
+pkill -f 'ros2 run perf throughput_recv'
+pkill -f 'install/perf/lib/perf/pong'
+pkill -f 'ros2 run perf pong'
+```
