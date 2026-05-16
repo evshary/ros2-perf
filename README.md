@@ -1,6 +1,8 @@
 # ros2-perf
 
-The performance benchmark tool for ROS 2
+The performance benchmark and plotting tool for ROS 2
+
+![ros2-perf](media/ros2-perf.png)
 
 ## Build
 
