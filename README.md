@@ -5,10 +5,9 @@ The performance benchmark tool for ROS 2
 ## Build
 
 ```shell
-mkdir -p ~/ros2_perf_ws/src && cd ~/ros2_perf_ws/src
 git clone https://github.com/evshary/ros2-perf.git
-cd ..
 colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+source install/setup.bash
 ```
 
 ## Latency
