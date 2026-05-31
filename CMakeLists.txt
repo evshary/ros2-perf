@@ -13,7 +13,6 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-find_package(ament_cmake_target_dependencies REQUIRED)
 find_package(rclcpp REQUIRED)
 
 # Create msgs
@@ -30,23 +29,31 @@ include_directories(include)
 add_executable(ping src/ping.cpp)
 rosidl_get_typesupport_target(cpp_typesupport_target
     ${PROJECT_NAME} rosidl_typesupport_cpp)
-target_link_libraries(ping "${cpp_typesupport_target}")
-ament_target_dependencies(ping rclcpp)
+target_link_libraries(ping PRIVATE
+  "${cpp_typesupport_target}"
+  rclcpp::rclcpp
+)
 add_executable(pong src/pong.cpp)
 rosidl_get_typesupport_target(cpp_typesupport_target
     ${PROJECT_NAME} rosidl_typesupport_cpp)
-target_link_libraries(pong "${cpp_typesupport_target}")
-ament_target_dependencies(pong rclcpp)
+target_link_libraries(pong PRIVATE
+  "${cpp_typesupport_target}"
+  rclcpp::rclcpp
+)
 add_executable(throughput_send src/throughput_send.cpp)
 rosidl_get_typesupport_target(cpp_typesupport_target
     ${PROJECT_NAME} rosidl_typesupport_cpp)
-target_link_libraries(throughput_send "${cpp_typesupport_target}")
-ament_target_dependencies(throughput_send rclcpp)
+target_link_libraries(throughput_send PRIVATE
+  "${cpp_typesupport_target}"
+  rclcpp::rclcpp
+)
 add_executable(throughput_recv src/throughput_recv.cpp)
 rosidl_get_typesupport_target(cpp_typesupport_target
     ${PROJECT_NAME} rosidl_typesupport_cpp)
-target_link_libraries(throughput_recv "${cpp_typesupport_target}")
-ament_target_dependencies(throughput_recv rclcpp)
+target_link_libraries(throughput_recv PRIVATE
+  "${cpp_typesupport_target}"
+  rclcpp::rclcpp
+)
 
 install(TARGETS
   ping
