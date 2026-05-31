@@ -2,8 +2,15 @@
 Changelog for ros2-perf
 ======================
 
-`Unreleased <https://github.com/evshary/ros2-perf/compare/0.10.0...main>`_
+`Unreleased <https://github.com/evshary/ros2-perf/compare/0.11.0...main>`_
 ---------------------------------------------------------------------------------------
+
+`0.11.0 (2026-05-31) <https://github.com/evshary/ros2-perf/compare/0.10.0...0.11.0>`_
+------------------------------------------------------------------------------------------------
+
+* Add README screenshot preview and plotting-oriented project overview
+* Expand CI coverage to lyrical and rolling, including rolling launch smoke testing
+* Modernize ROS spinning and CMake target linking for newer ROS distros
 
 `0.10.0 (2026-05-16) <https://github.com/evshary/ros2-perf/compare/0.9.0...0.10.0>`_
 ------------------------------------------------------------------------------------------------
