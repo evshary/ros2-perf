@@ -46,6 +46,12 @@ jobs:
           - ros_distro: kilted
             container_image: rostooling/setup-ros-docker:ubuntu-noble-ros-kilted-ros-base-latest
             run_launch_smoke_test: false
+          - ros_distro: lyrical
+            container_image: rostooling/setup-ros-docker:ubuntu-resolute-ros-lyrical-ros-base-latest
+            run_launch_smoke_test: false
+          - ros_distro: rolling
+            container_image: rostooling/setup-ros-docker:ubuntu-resolute-ros-rolling-ros-base-latest
+            run_launch_smoke_test: true
     container:
       image: ${{ matrix.container_image }}
     steps:
