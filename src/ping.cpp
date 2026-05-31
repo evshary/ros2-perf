@@ -322,9 +322,12 @@ int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
   auto ping_node = std::make_shared<PingNode>();
+  rclcpp::executors::SingleThreadedExecutor executor;
+  executor.add_node(ping_node);
   while (ping_node->is_running()) {
-    rclcpp::spin_some(ping_node);
+    executor.spin_some();
   }
+  executor.remove_node(ping_node);
   ping_node->show_results();
   rclcpp::shutdown();
   return 0;

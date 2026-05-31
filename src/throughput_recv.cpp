@@ -336,9 +336,12 @@ int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
   auto node = std::make_shared<ThroughputRecvNode>();
+  rclcpp::executors::SingleThreadedExecutor executor;
+  executor.add_node(node);
   while (rclcpp::ok() && node->is_running()) {
-    rclcpp::spin_some(node);
+    executor.spin_some();
   }
+  executor.remove_node(node);
   node->show_final_summary();
   rclcpp::shutdown();
   return 0;

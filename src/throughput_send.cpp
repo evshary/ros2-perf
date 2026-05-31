@@ -38,12 +38,15 @@ public:
 
   void run()
   {
+    rclcpp::executors::SingleThreadedExecutor executor;
+    executor.add_node(get_node_base_interface());
     while (rclcpp::ok()) {
       stamp_sequence();
       publisher_->publish(*message_);
       ++sequence_;
-      rclcpp::spin_some(get_node_base_interface());
+      executor.spin_some();
     }
+    executor.remove_node(get_node_base_interface());
   }
 
 private:
